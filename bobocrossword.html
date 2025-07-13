@@ -1,0 +1,378 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="Generator" content="Crossword Compiler (www.crossword-compiler.com)">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style type="text/css">
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 12pt;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .PuzTitle {
+            font-size: 24pt;
+            color: #1a1a1a;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .CopyTag {
+            font-size: 9pt;
+            color: #666;
+            text-align: center;
+            display: block;
+            margin-top: 20px;
+        }
+        .PuzContainer {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        #CrosswordCompilerPuz {
+            /* The applet will set its own size, but we can provide hints */
+            max-width: 100%;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #ddd;
+            margin: 30px 0;
+        }
+
+        /* Override for applet-generated clue styles */
+        .GridClues, .Clues {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+    </style>
+
+    <title>A Puzzle For My Bobo</title>
+</head>
+<body>
+    <div class="PuzContainer">
+        <div class="PuzTitle">A Puzzle For My Bobo</div>
+        <div id="CrosswordCompilerPuz"></div>
+    </div>
+
+    <!-- Crossword applet initialization -->
+    <script src="CrosswordCompilerApp/jquery.js"></script>
+    <script src="CrosswordCompilerApp/raphael.js"></script>
+    <script src="CrosswordCompilerApp/crosswordCompiler.js"></script>
+    <script src="bobocrossword.js"></script>
+    <!-- ✨ Custom "alert on theme-answer" script ✨ -->
+    <script>
+        $(function(){
+            $("#CrosswordCompilerPuz").CrosswordCompiler(
+                CrosswordPuzzleData,
+                null,
+                { SUBMITMETHOD: "POST", PROGRESS: "" }
+            );
+
+            setTimeout(function() {
+                console.log('[BoboCrossword] Custom script loaded');
+                
+                // Define the themed entries and their expected positions
+                const THEME = {
+                    'SMOLKITTY': { msg: 'SMOL KITTY found smol kitty 😻', done: false },
+                    'BOBONCHIK': { msg: 'это действительно ты!', done: false },
+                    'CHEBURASHKA': { msg: 'тебя зовут чебурашка. ', done: false },
+                    'SASHANICKNAME': { msg: 'You\'re such a smart kitty. Molodets!!', done: false, is_revealer: true }
+                };
+
+                // Function to get all letters from the grid
+                function getAllLetters() {
+                    const letters = [];
+                    document.querySelectorAll('.GridSquare.Let p > span').forEach(span => {
+                        const letter = span.textContent.trim();
+                        if (letter) {
+                            letters.push(letter);
+                        }
+                    });
+                    return letters.join('');
+                }
+
+                // Function to check if a word exists in the grid
+                function wordExistsInGrid(word) {
+                    const allText = getAllLetters();
+                    return allText.includes(word);
+                }
+
+                // Function to flash cells containing a word
+                function flashWord(word) {
+                    // Find cells that contain letters of this specific word
+                    const allCells = Array.from(document.querySelectorAll('.GridSquare.Let'));
+                    const wordCells = [];
+                    
+                    // Simple approach: find consecutive cells that spell out the word
+                    for (let i = 0; i <= allCells.length - word.length; i++) {
+                        let match = true;
+                        let tempCells = [];
+                        
+                        for (let j = 0; j < word.length; j++) {
+                            const cell = allCells[i + j];
+                            const letterSpan = cell ? cell.querySelector('p > span') : null;
+                            const letter = letterSpan ? letterSpan.textContent.trim() : '';
+                            
+                            if (letter !== word[j]) {
+                                match = false;
+                                break;
+                            }
+                            tempCells.push(cell);
+                        }
+                        
+                        if (match) {
+                            wordCells.push(...tempCells);
+                            break; // Found the word, stop searching
+                        }
+                    }
+                    
+                    // Flash the cells for this word
+                    wordCells.forEach(cell => {
+                        if (cell) {
+                            cell.style.backgroundColor = '#90EE90';
+                            setTimeout(() => {
+                                cell.style.backgroundColor = '';
+                            }, 1000);
+                        }
+                    });
+                }
+
+                // Function to highlight themed answers (yellow highlighting)
+                function highlightThemedAnswers() {
+                    const themedWords = ['SMOLKITTY', 'BOBONCHIK', 'CHEBURASHKA'];
+                    
+                    console.log('[BoboCrossword] Highlighting themed answers...');
+                    
+                    themedWords.forEach(word => {
+                        // Only highlight if the word has been completed
+                        if (!THEME[word] || !THEME[word].done) {
+                            console.log('[BoboCrossword] Word', word, 'not completed yet, skipping');
+                            return;
+                        }
+                        
+                        console.log('[BoboCrossword] Looking for word:', word);
+                        
+                        // Find all cells and look for this word
+                        const allCells = Array.from(document.querySelectorAll('.GridSquare.Let'));
+                        
+                        // Check every possible starting position
+                        for (let startIdx = 0; startIdx < allCells.length; startIdx++) {
+                            let found = false;
+                            let cellsToHighlight = [];
+                            
+                            // Check horizontal
+                            if (startIdx + word.length <= allCells.length) {
+                                let match = true;
+                                let tempCells = [];
+                                
+                                for (let i = 0; i < word.length; i++) {
+                                    const cell = allCells[startIdx + i];
+                                    const letterSpan = cell.querySelector('p > span');
+                                    const letter = letterSpan ? letterSpan.textContent.trim() : '';
+                                    
+                                    if (letter !== word[i]) {
+                                        match = false;
+                                        break;
+                                    }
+                                    tempCells.push(cell);
+                                }
+                                
+                                if (match) {
+                                    found = true;
+                                    cellsToHighlight = tempCells;
+                                    console.log('[BoboCrossword] Found', word, 'horizontally at index', startIdx);
+                                }
+                            }
+                            
+                            // Check vertical if not found horizontally
+                            if (!found) {
+                                // For vertical, we need to check cells that are aligned vertically
+                                const startCell = allCells[startIdx];
+                                const startRect = startCell.getBoundingClientRect();
+                                let tempCells = [startCell];
+                                let match = true;
+                                
+                                // Check if first letter matches
+                                const firstLetterSpan = startCell.querySelector('p > span');
+                                const firstLetter = firstLetterSpan ? firstLetterSpan.textContent.trim() : '';
+                                if (firstLetter !== word[0]) continue;
+                                
+                                // Find vertically aligned cells
+                                for (let i = 1; i < word.length; i++) {
+                                    let foundCell = null;
+                                    
+                                    for (let j = startIdx + 1; j < allCells.length; j++) {
+                                        const cell = allCells[j];
+                                        const rect = cell.getBoundingClientRect();
+                                        
+                                        // Check if vertically aligned
+                                        if (Math.abs(rect.left - startRect.left) < 5 && 
+                                            rect.top > startRect.top &&
+                                            tempCells.length === i) {
+                                            
+                                            const letterSpan = cell.querySelector('p > span');
+                                            const letter = letterSpan ? letterSpan.textContent.trim() : '';
+                                            
+                                            if (letter === word[i]) {
+                                                foundCell = cell;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (!foundCell) {
+                                        match = false;
+                                        break;
+                                    }
+                                    tempCells.push(foundCell);
+                                }
+                                
+                                if (match && tempCells.length === word.length) {
+                                    found = true;
+                                    cellsToHighlight = tempCells;
+                                    console.log('[BoboCrossword] Found', word, 'vertically at index', startIdx);
+                                }
+                            }
+                            
+                            // Highlight the cells if found
+                            if (found) {
+                                cellsToHighlight.forEach(cell => {
+                                    cell.style.backgroundColor = '#FFFF99';
+                                    cell.style.border = '2px solid #FFD700';
+                                });
+                                console.log('[BoboCrossword] Highlighted', cellsToHighlight.length, 'cells for', word);
+                                break; // Stop searching for this word
+                            }
+                        }
+                    });
+                }
+
+                // Function to add click listener to revealer clue
+                function addRevealerClickListener() {
+                    console.log('[BoboCrossword] Setting up revealer click listeners');
+                    
+                    // Find the starting cell with clue number "59"
+                    let startCell = null;
+                    let startIndex = -1;
+                    const allCells = Array.from(document.querySelectorAll('.GridSquare.Let'));
+                    
+                    allCells.forEach((cell, index) => {
+                        const clueSpan = cell.querySelector('span');
+                        if (clueSpan && clueSpan.textContent.trim() === '59') {
+                            startCell = cell;
+                            startIndex = index;
+                            console.log('[BoboCrossword] Found start cell for 59 at index:', index);
+                        }
+                    });
+                    
+                    if (!startCell) {
+                        console.log('[BoboCrossword] Could not find cell with clue 59');
+                        return;
+                    }
+                    
+                    // Make a list of revealer cells
+                    const revealerCells = [startCell];
+                    
+                    // For vertical words, find cells in the same column
+                    const startRect = startCell.getBoundingClientRect();
+                    console.log('[BoboCrossword] Looking for vertical cells aligned with x:', startRect.left);
+                    
+                    // Find all cells below this one in the same column
+                    allCells.forEach((cell, index) => {
+                        if (cell === startCell) return;
+                        
+                        const rect = cell.getBoundingClientRect();
+                        // Check if cell is in the same column and below
+                        if (Math.abs(rect.left - startRect.left) < 5 && rect.top > startRect.top) {
+                            // Add this cell if it's part of the word (check for reasonable vertical distance)
+                            const verticalGap = rect.top - startRect.top;
+                            const expectedCellPosition = Math.round(verticalGap / 23); // Assuming ~23px per cell
+                            
+                            if (expectedCellPosition > 0 && expectedCellPosition < 13) {
+                                revealerCells.push(cell);
+                                console.log('[BoboCrossword] Added cell at position', expectedCellPosition);
+                            }
+                        }
+                    });
+                    
+                    // Sort cells by vertical position
+                    revealerCells.sort((a, b) => {
+                        const aRect = a.getBoundingClientRect();
+                        const bRect = b.getBoundingClientRect();
+                        return aRect.top - bRect.top;
+                    });
+                    
+                    // Limit to 13 cells (SASHANICKNAME length)
+                    while (revealerCells.length > 13) {
+                        revealerCells.pop();
+                    }
+                    
+                    console.log('[BoboCrossword] Found', revealerCells.length, 'revealer cells');
+                    
+                    // Make all revealer cells clickable
+                    revealerCells.forEach((cell, index) => {
+                        cell.style.cursor = 'pointer';
+                        cell.style.border = '2px dashed #FF6B6B';
+                        cell.addEventListener('click', function() {
+                            console.log('[BoboCrossword] Revealer cell clicked!');
+                            highlightThemedAnswers();
+                        });
+                        console.log('[BoboCrossword] Made cell', index, 'clickable');
+                    });
+                }
+
+                // Function to check all themed words
+                function checkThemeWords() {
+                    let allDone = true;
+                    
+                    Object.keys(THEME).forEach(word => {
+                        const entry = THEME[word];
+                        if (entry.done) return;
+                        
+                        if (wordExistsInGrid(word)) {
+                            entry.done = true;
+                            alert(entry.msg);
+                            flashWord(word);
+                        } else {
+                            allDone = false;
+                        }
+                    });
+                    
+                    return allDone;
+                }
+
+                // Set up revealer click listener immediately (don't wait for completion)
+                setTimeout(() => {
+                    addRevealerClickListener();
+                }, 1000);
+
+                // Start checking every 1 second
+                const checkInterval = setInterval(() => {
+                    if (checkThemeWords()) {
+                        console.log('[BoboCrossword] All themed words found! Stopping checks.');
+                        clearInterval(checkInterval);
+                    }
+                }, 1000);
+                
+                console.log('[BoboCrossword] Started monitoring themed words');
+                
+            }, 3000);
+        });
+    </script>
+
+    <span class="CopyTag">
+        Web page created by
+        <a href="https://www.crossword-compiler.com/">Crossword Compiler</a>.
+    </span>
+</body>
+</html>
